@@ -167,7 +167,6 @@ Promise.all([promiseAttachments.then(function (attachments) {
     document.querySelector('.weapons').innerHTML = '';
     chartsById = {};
     weapons = filterWeapons(weaponsById, weaponGroups);
-    console.log('weapons', weapons);
     draw(chartsById, weapons);
     document.querySelector('.loader').classList.add('hidden');
   }
@@ -211,11 +210,10 @@ function draw(chartsById, weapons) {
       chartsById[weaponModel.id] = chart;
     }
   });
-  document.querySelector('.loader').innerHTML = '';
 }
 
 function drawChart(title, weaponfile, labels, data) {
-  var template = '\n    <div class="chart">\n      <div class="chart-header">\n        <span class="weaponfile">' + weaponfile + '</span>\n        <span class="title">' + title + '</span>\n      </div>\n      <span class="watermark">CODCharts.com</span>\n      <canvas width="250" height="250"></canvas>\n    </div>\n  ';
+  var template = '\n    <div class="chart">\n      <div class="chart-header">\n        <span class="title">' + title + '</span>\n        <span class="weaponfile">' + weaponfile + '</span>\n      </div>\n      <span class="watermark">CODCharts.com</span>\n      <canvas width="250" height="250"></canvas>\n    </div>\n  ';
   var div = document.createElement('div');
   div.innerHTML = template;
   document.querySelector('.weapons').appendChild(div);
