@@ -1,3 +1,12 @@
+const weaponGroupNames = {
+  ar: 'Assault Rifles',
+  smg: 'Submachine Guns',
+  lmg: 'Light Machine Guns',
+  sniper: 'Sniper Rifles',
+  shotgun: 'Shotguns',
+  pistol: 'Pistols'
+};
+
 function load(path) {
   return new Promise((resolve, reject) => {
     const req = new XMLHttpRequest();
@@ -7,13 +16,13 @@ function load(path) {
       if (req.readyState == 4 && req.status == '200') {
         resolve(req.responseText);
       }
-    }
+    };
     req.send(null);
   });
 }
 
 function loadJson(path) {
-  return load(path).then((res) => JSON.parse(res));
+  return load(path).then(res => JSON.parse(res));
 }
 
 function parseRangeUnits(units) {
@@ -23,12 +32,12 @@ function parseRangeUnits(units) {
     feet: units * 0.08334,
     yards: units * 0.02778,
     centimeters: units * 2.54,
-    meters: Math.floor(units * 0.0254),
+    meters: Math.floor(units * 0.0254)
   };
 }
 
 function getSuppressorDamageRangeScale(weapon, rangeIndex) {
-  const damageRangeScaleKeys = ['damageRangeScale1', 'damageRangeScale2',	'damageRangeScale3',	'damageRangeScale4',	'damageRangeScale5',	'damageRangeScale6'];
+  const damageRangeScaleKeys = ['damageRangeScale1', 'damageRangeScale2', 'damageRangeScale3', 'damageRangeScale4', 'damageRangeScale5', 'damageRangeScale6'];
   if (weapon.WEAPONFILE.indexOf('ar_standard') !== -1) {
     return Number(attachmentsById.suppressed.damageRangeScale);
   }
@@ -59,7 +68,7 @@ function getRange(weapon, rangeIndex) {
 }
 
 function getStatsAtRange(weapon, attachmentsById, attachments, rangeIndex) {
-  const damageScaleKeys = ['damageScale1', 'damageScale2',	'damageScale3',	'damageScale4',	'damageScale5',	'damageScale6'];
+  const damageScaleKeys = ['damageScale1', 'damageScale2', 'damageScale3', 'damageScale4', 'damageScale5', 'damageScale6'];
 
   const damage = getDamage(weapon, rangeIndex);
   const stk = Math.ceil(100 / damage);
@@ -70,7 +79,7 @@ function getStatsAtRange(weapon, attachmentsById, attachments, rangeIndex) {
   return {
     damage: damage,
     stk: stk,
-    range: parseRangeUnits(range),
+    range: parseRangeUnits(range)
   };
 }
 
@@ -97,30 +106,27 @@ function parseWeapon(weapon, attachmentsById, attachments) {
   return {
     name: weapon.name,
     id: weapon.WEAPONFILE,
-    stats: stats,
+    stats: stats
   };
 }
 
 const promiseAttachments = new Promise((resolve, reject) => {
-  d3.csv('data/raw_attachments.csv')
-    .get((error, rows) => {
-      if (error) {
-        reject(error);
-      }
+  d3.csv('data/raw_attachments.csv').get((error, rows) => {
+    if (error) {
+      reject(error);
+    }
 
-      const attachmentsById = window.attachmentsById = _.keyBy(rows, 'ATTACHMENTFILE');
+    const attachmentsById = window.attachmentsById = _.keyBy(rows, 'ATTACHMENTFILE');
 
-      resolve(attachmentsById);
-    });
+    resolve(attachmentsById);
+  });
 });
 
-const promiseWeapons = (attachmentsById) => new Promise((resolve, reject) => {
-  d3.csv('data/raw_weapons.csv')
-  .row((data) => {
-    data.name = data.WEAPONFILE.indexOf('dualoptic_') === 0 ? `${data.displayName} Varix` : data.displayName;
+const promiseWeapons = attachmentsById => new Promise((resolve, reject) => {
+  d3.csv('data/raw_weapons.csv').row(data => {
+    data.name = data.WEAPONFILE.indexOf('dualoptic_') === 0 ? `${ data.displayName } Varix` : data.displayName;
     return data;
-  })
-  .get((error, rows) => {
+  }).get((error, rows) => {
     if (error) {
       reject(error);
     }
@@ -131,18 +137,13 @@ const promiseWeapons = (attachmentsById) => new Promise((resolve, reject) => {
   });
 });
 
-const promiseWeaponGroups = loadJson('data/weapon_groups.json')
-.then((res) => {
+const promiseWeaponGroups = loadJson('data/weapon_groups.json').then(res => {
   const weaponGroups = window.weaponGroups = res;
   weaponGroups.all = _.reduce(weaponGroups, (prev, current) => [...prev, ...current]);
   return weaponGroups;
 });
 
-Promise.all([
-  promiseAttachments.then(attachments => promiseWeapons(attachments)),
-  promiseWeaponGroups,
-])
-.then((args) => {
+Promise.all([promiseAttachments.then(attachments => promiseWeapons(attachments)), promiseWeaponGroups]).then(args => {
   const weaponsById = args[0];
   const weaponGroups = args[1];
 
@@ -154,30 +155,29 @@ Promise.all([
     document.querySelector('.weapons').innerHTML = '';
     chartsById = {};
     weapons = filterWeapons(weaponsById, weaponGroups);
+    console.log('weapons', weapons);
     draw(chartsById, weapons);
     document.querySelector('.loader').classList.add('hidden');
   }
   setup();
 
   document.querySelector('select#category').onchange = setup;
+  document.querySelector('select#game').onchange = setup;
   document.querySelector('input#suppressor').onchange = () => draw(chartsById, weapons);
-})
+});
 // .catch((err) => console.error(err));
 
 function filterWeapons(weaponsById, weaponGroups) {
   const category = document.querySelector('select#category').value;
+  const game = document.querySelector('select#game').value;
 
-  return _.filter(weaponsById, (weapon) => (
-    weapon.WEAPONFILE.indexOf('_mp') !== -1 &&
-    weapon.WEAPONFILE.indexOf('dualoptic_') === -1 &&
-    weaponGroups[category].indexOf(weapon.displayName) !== -1
-  ));
+  return _.filter(weaponsById, weapon => weapon.WEAPONFILE.indexOf(game) !== -1 && weapon.WEAPONFILE.indexOf('dualoptic_') === -1 && weaponGroups[category].indexOf(weapon.displayName) !== -1);
 }
 
 function draw(chartsById, weapons) {
   const attachments = document.querySelector('input#suppressor').checked ? ['suppressor'] : [];
 
-  weapons.forEach((weapon) => {
+  weapons.forEach(weapon => {
     const weaponModel = parseWeapon(weapon, attachmentsById, attachments);
     const labels = weaponModel.stats.map(stat => stat.stk);
     const data = weaponModel.stats.map(stat => stat.range.meters);
@@ -186,21 +186,21 @@ function draw(chartsById, weapons) {
     if (chart) {
       chart.data.datasets[0].data = data;
       chart.update();
-    }
-    else {
-      chart = drawChart(weaponModel.name, labels, data);
+    } else {
+      chart = drawChart(weaponModel.name, weaponModel.id, labels, data);
       chartsById[weaponModel.id] = chart;
     }
   });
   document.querySelector('.loader').innerHTML = '';
 }
 
-Chart.defaults.global.defaultFontFamily = 'Oswald, sans-serif';
-
-function drawChart(title, labels, data) {
+function drawChart(title, weaponfile, labels, data) {
   const template = `
     <div class="chart">
-      <span class="title">${title}</span>
+      <div class="chart-header">
+        <span class="weaponfile">${ weaponfile }</span>
+        <span class="title">${ title }</span>
+      </div>
       <span class="watermark">CODCharts.com</span>
       <canvas width="250" height="250"></canvas>
     </div>
@@ -212,46 +212,46 @@ function drawChart(title, labels, data) {
 
   const chartData = {
     labels: labels,
-    datasets: [
-      {
-        label: `${title} Shots To Kill`,
-        backgroundColor: 'rgba(255, 102, 0, 0.8)',
-        borderColor: 'rgba(255, 102, 0, 1)',
-        borderWidth: 1,
-        hoverBackgroundColor: 'rgba(255, 102, 0, 0.5)',
-        hoverBorderColor: 'rgba(255, 102, 0, 0.6)',
-        data: data,
-      },
-    ]
+    datasets: [{
+      label: `${ title } Shots To Kill`,
+      backgroundColor: 'rgba(255, 102, 0, 0.8)',
+      borderColor: 'rgba(255, 102, 0, 1)',
+      borderWidth: 1,
+      hoverBackgroundColor: 'rgba(255, 102, 0, 0.5)',
+      hoverBorderColor: 'rgba(255, 102, 0, 0.6)',
+      data: data
+    }]
   };
 
   const options = {
     legend: {
-      display: false,
+      display: false
     },
     scales: {
       paddingLeft: 30,
       xAxes: [{
         ticks: {
           fontSize: 20,
-          fontColor: 'rgba(102, 102, 102, 1)',
+          fontColor: 'rgba(102, 102, 102, 1)'
         },
         gridLines: {
           display: false
-        },
+        }
       }],
       yAxes: [{
         scaleLabel: {
-          display: true,
+          display: false,
           labelString: 'Distance (meters)',
+          fontFamily: 'sans-serif'
         },
         ticks: {
-          max: 100,
-          min: 0,
+          maxTicksLimit: 5,
+          max: 70,
+          min: 0
         },
         gridLines: {
-          color: 'rgba(52, 52, 52, 1)',
-        },
+          color: 'rgba(52, 52, 52, 1)'
+        }
       }]
     }
   };
@@ -259,6 +259,6 @@ function drawChart(title, labels, data) {
   return new Chart(ctx, {
     type: 'bar',
     data: chartData,
-    options: options,
+    options: options
   });
 }
