@@ -1,4 +1,8 @@
-const weaponGroupNames = {
+'use strict';
+
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
+var weaponGroupNames = {
   ar: 'Assault Rifles',
   smg: 'Submachine Guns',
   lmg: 'Light Machine Guns',
@@ -8,8 +12,8 @@ const weaponGroupNames = {
 };
 
 function load(path) {
-  return new Promise((resolve, reject) => {
-    const req = new XMLHttpRequest();
+  return new Promise(function (resolve, reject) {
+    var req = new XMLHttpRequest();
     req.overrideMimeType('application/json');
     req.open('GET', path, true);
     req.onreadystatechange = function () {
@@ -22,7 +26,9 @@ function load(path) {
 }
 
 function loadJson(path) {
-  return load(path).then(res => JSON.parse(res));
+  return load(path).then(function (res) {
+    return JSON.parse(res);
+  });
 }
 
 function parseRangeUnits(units) {
@@ -37,7 +43,7 @@ function parseRangeUnits(units) {
 }
 
 function getSuppressorDamageRangeScale(weapon, rangeIndex) {
-  const damageRangeScaleKeys = ['damageRangeScale1', 'damageRangeScale2', 'damageRangeScale3', 'damageRangeScale4', 'damageRangeScale5', 'damageRangeScale6'];
+  var damageRangeScaleKeys = ['damageRangeScale1', 'damageRangeScale2', 'damageRangeScale3', 'damageRangeScale4', 'damageRangeScale5', 'damageRangeScale6'];
   if (weapon.WEAPONFILE.indexOf('ar_standard') !== -1) {
     return Number(attachmentsById.suppressed.damageRangeScale);
   }
@@ -57,22 +63,22 @@ function getSuppressorDamageRangeScale(weapon, rangeIndex) {
 }
 
 function getDamage(weapon, rangeIndex) {
-  const damageKeys = ['damage', 'damage2', 'damage3', 'damage4', 'damage5', 'minDamage'];
-  const multishotBaseDamageKeys = ['multishotBaseDamage1', 'multishotBaseDamage2', 'multishotBaseDamage3', 'multishotBaseDamage4', 'multishotBaseDamage5', 'multishotBaseDamage6'];
+  var damageKeys = ['damage', 'damage2', 'damage3', 'damage4', 'damage5', 'minDamage'];
+  var multishotBaseDamageKeys = ['multishotBaseDamage1', 'multishotBaseDamage2', 'multishotBaseDamage3', 'multishotBaseDamage4', 'multishotBaseDamage5', 'multishotBaseDamage6'];
   return Number(weapon[damageKeys[rangeIndex]]) + Number(weapon[multishotBaseDamageKeys[rangeIndex]]);
 }
 
 function getRange(weapon, rangeIndex) {
-  const rangeKeys = ['maxDamageRange', 'damageRange2', 'damageRange3', 'damageRange4', 'damageRange5', 'minDamageRange'];
+  var rangeKeys = ['maxDamageRange', 'damageRange2', 'damageRange3', 'damageRange4', 'damageRange5', 'minDamageRange'];
   return Number(weapon[rangeKeys[rangeIndex]]);
 }
 
 function getStatsAtRange(weapon, attachmentsById, attachments, rangeIndex) {
-  const damageScaleKeys = ['damageScale1', 'damageScale2', 'damageScale3', 'damageScale4', 'damageScale5', 'damageScale6'];
+  var damageScaleKeys = ['damageScale1', 'damageScale2', 'damageScale3', 'damageScale4', 'damageScale5', 'damageScale6'];
 
-  const damage = getDamage(weapon, rangeIndex);
-  const stk = Math.ceil(100 / damage);
-  let range = getRange(weapon, rangeIndex);
+  var damage = getDamage(weapon, rangeIndex);
+  var stk = Math.ceil(100 / damage);
+  var range = getRange(weapon, rangeIndex);
   if (attachments.indexOf('suppressor') !== -1) {
     range = range * getSuppressorDamageRangeScale(weapon, rangeIndex);
   }
@@ -84,21 +90,21 @@ function getStatsAtRange(weapon, attachmentsById, attachments, rangeIndex) {
 }
 
 function parseWeapon(weapon, attachmentsById, attachments) {
-  const rangeIndexes = [0, 1, 3, 4, 5];
+  var rangeIndexes = [0, 1, 3, 4, 5];
 
-  const stats = rangeIndexes.reduce((prev, rangeKey) => {
-    const stats = getStatsAtRange(weapon, attachmentsById, attachments, rangeKey);
+  var stats = rangeIndexes.reduce(function (prev, rangeKey) {
+    var stats = getStatsAtRange(weapon, attachmentsById, attachments, rangeKey);
     if (stats.stk !== Infinity) {
       if (prev.length > 0) {
         if (stats.stk === prev[prev.length - 1].stk) {
           prev.pop();
-          return [...prev, stats];
+          return [].concat(_toConsumableArray(prev), [stats]);
         }
         if (stats.range.units - prev[prev.length - 1].range.units < 2) {
           return prev;
         }
       }
-      return [...prev, stats];
+      return [].concat(_toConsumableArray(prev), [stats]);
     }
     return prev;
   }, []);
@@ -110,45 +116,51 @@ function parseWeapon(weapon, attachmentsById, attachments) {
   };
 }
 
-const promiseAttachments = new Promise((resolve, reject) => {
-  d3.csv('data/raw_attachments.csv').get((error, rows) => {
+var promiseAttachments = new Promise(function (resolve, reject) {
+  d3.csv('data/raw_attachments.csv').get(function (error, rows) {
     if (error) {
       reject(error);
     }
 
-    const attachmentsById = window.attachmentsById = _.keyBy(rows, 'ATTACHMENTFILE');
+    var attachmentsById = window.attachmentsById = _.keyBy(rows, 'ATTACHMENTFILE');
 
     resolve(attachmentsById);
   });
 });
 
-const promiseWeapons = attachmentsById => new Promise((resolve, reject) => {
-  d3.csv('data/raw_weapons.csv').row(data => {
-    data.name = data.WEAPONFILE.indexOf('dualoptic_') === 0 ? `${ data.displayName } Varix` : data.displayName;
-    return data;
-  }).get((error, rows) => {
-    if (error) {
-      reject(error);
-    }
+var promiseWeapons = function promiseWeapons(attachmentsById) {
+  return new Promise(function (resolve, reject) {
+    d3.csv('data/raw_weapons.csv').row(function (data) {
+      data.name = data.WEAPONFILE.indexOf('dualoptic_') === 0 ? data.displayName + ' Varix' : data.displayName;
+      return data;
+    }).get(function (error, rows) {
+      if (error) {
+        reject(error);
+      }
 
-    const weaponsById = window.weaponsById = _.keyBy(rows, 'WEAPONFILE');
+      var weaponsById = window.weaponsById = _.keyBy(rows, 'WEAPONFILE');
 
-    resolve(weaponsById);
+      resolve(weaponsById);
+    });
   });
-});
+};
 
-const promiseWeaponGroups = loadJson('data/weapon_groups.json').then(res => {
-  const weaponGroups = window.weaponGroups = res;
-  weaponGroups.all = _.reduce(weaponGroups, (prev, current) => [...prev, ...current]);
+var promiseWeaponGroups = loadJson('data/weapon_groups.json').then(function (res) {
+  var weaponGroups = window.weaponGroups = res;
+  weaponGroups.all = _.reduce(weaponGroups, function (prev, current) {
+    return [].concat(_toConsumableArray(prev), _toConsumableArray(current));
+  });
   return weaponGroups;
 });
 
-Promise.all([promiseAttachments.then(attachments => promiseWeapons(attachments)), promiseWeaponGroups]).then(args => {
-  const weaponsById = args[0];
-  const weaponGroups = args[1];
+Promise.all([promiseAttachments.then(function (attachments) {
+  return promiseWeapons(attachments);
+}), promiseWeaponGroups]).then(function (args) {
+  var weaponsById = args[0];
+  var weaponGroups = args[1];
 
-  let chartsById;
-  let weapons;
+  var chartsById = void 0;
+  var weapons = void 0;
 
   function setup() {
     document.querySelector('.loader').classList.remove('hidden');
@@ -163,26 +175,34 @@ Promise.all([promiseAttachments.then(attachments => promiseWeapons(attachments))
 
   document.querySelector('select#category').onchange = setup;
   document.querySelector('select#game').onchange = setup;
-  document.querySelector('input#suppressor').onchange = () => draw(chartsById, weapons);
+  document.querySelector('input#suppressor').onchange = function () {
+    return draw(chartsById, weapons);
+  };
 });
 // .catch((err) => console.error(err));
 
 function filterWeapons(weaponsById, weaponGroups) {
-  const category = document.querySelector('select#category').value;
-  const game = document.querySelector('select#game').value;
+  var category = document.querySelector('select#category').value;
+  var game = document.querySelector('select#game').value;
 
-  return _.filter(weaponsById, weapon => weapon.WEAPONFILE.indexOf(game) !== -1 && weapon.WEAPONFILE.indexOf('dualoptic_') === -1 && weaponGroups[category].indexOf(weapon.displayName) !== -1);
+  return _.filter(weaponsById, function (weapon) {
+    return weapon.WEAPONFILE.indexOf(game) !== -1 && weapon.WEAPONFILE.indexOf('dualoptic_') === -1 && weaponGroups[category].indexOf(weapon.displayName) !== -1;
+  });
 }
 
 function draw(chartsById, weapons) {
-  const attachments = document.querySelector('input#suppressor').checked ? ['suppressor'] : [];
+  var attachments = document.querySelector('input#suppressor').checked ? ['suppressor'] : [];
 
-  weapons.forEach(weapon => {
-    const weaponModel = parseWeapon(weapon, attachmentsById, attachments);
-    const labels = weaponModel.stats.map(stat => stat.stk);
-    const data = weaponModel.stats.map(stat => stat.range.meters);
+  weapons.forEach(function (weapon) {
+    var weaponModel = parseWeapon(weapon, attachmentsById, attachments);
+    var labels = weaponModel.stats.map(function (stat) {
+      return stat.stk;
+    });
+    var data = weaponModel.stats.map(function (stat) {
+      return stat.range.meters;
+    });
 
-    let chart = chartsById[weaponModel.id];
+    var chart = chartsById[weaponModel.id];
     if (chart) {
       chart.data.datasets[0].data = data;
       chart.update();
@@ -195,25 +215,16 @@ function draw(chartsById, weapons) {
 }
 
 function drawChart(title, weaponfile, labels, data) {
-  const template = `
-    <div class="chart">
-      <div class="chart-header">
-        <span class="weaponfile">${ weaponfile }</span>
-        <span class="title">${ title }</span>
-      </div>
-      <span class="watermark">CODCharts.com</span>
-      <canvas width="250" height="250"></canvas>
-    </div>
-  `;
-  const div = document.createElement('div');
+  var template = '\n    <div class="chart">\n      <div class="chart-header">\n        <span class="weaponfile">' + weaponfile + '</span>\n        <span class="title">' + title + '</span>\n      </div>\n      <span class="watermark">CODCharts.com</span>\n      <canvas width="250" height="250"></canvas>\n    </div>\n  ';
+  var div = document.createElement('div');
   div.innerHTML = template;
   document.querySelector('.weapons').appendChild(div);
-  const ctx = div.querySelector('canvas');
+  var ctx = div.querySelector('canvas');
 
-  const chartData = {
+  var chartData = {
     labels: labels,
     datasets: [{
-      label: `${ title } Shots To Kill`,
+      label: title + ' Shots To Kill',
       backgroundColor: 'rgba(255, 102, 0, 0.8)',
       borderColor: 'rgba(255, 102, 0, 1)',
       borderWidth: 1,
@@ -223,7 +234,7 @@ function drawChart(title, weaponfile, labels, data) {
     }]
   };
 
-  const options = {
+  var options = {
     legend: {
       display: false
     },
