@@ -1,20 +1,10 @@
 'use strict';
 
-var _chartjs = require('chartjs');
-
-var _chartjs2 = _interopRequireDefault(_chartjs);
-
-var _lodash = require('lodash');
-
-var _lodash2 = _interopRequireDefault(_lodash);
-
-var _d = require('d3');
-
-var _d2 = _interopRequireDefault(_d);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
+// import Chart from 'chartjs' ;
+// import lodash from 'lodash';
+// import d3 from 'd3';
 
 var weaponGroupNames = {
   ar: 'Assault Rifles',
@@ -49,7 +39,7 @@ function parseRangeUnits(units) {
   return {
     units: units,
     inches: units,
-    feet: units * 0.08334,
+    feet: Math.ceil(units * 0.08334),
     yards: units * 0.02778,
     centimeters: units * 2.54,
     meters: Math.floor(units * 0.0254)
@@ -126,12 +116,13 @@ function parseWeapon(weapon, attachmentsById, attachments) {
   return {
     name: weapon.name,
     id: weapon.WEAPONFILE,
-    stats: stats
+    stats: stats,
+    weapon: weapon
   };
 }
 
 var promiseAttachments = new Promise(function (resolve, reject) {
-  _d2.default.csv('data/raw_attachments.csv').get(function (error, rows) {
+  d3.csv('data/raw_attachments.csv').get(function (error, rows) {
     if (error) {
       reject(error);
     }
@@ -142,9 +133,11 @@ var promiseAttachments = new Promise(function (resolve, reject) {
   });
 });
 
+var weaponsById = {};
+
 var promiseWeapons = function promiseWeapons(attachmentsById) {
   return new Promise(function (resolve, reject) {
-    _d2.default.csv('data/raw_weapons.csv').row(function (data) {
+    d3.csv('data/raw_weapons.csv').row(function (data) {
       data.name = data.WEAPONFILE.indexOf('dualoptic_') === 0 ? data.displayName + ' Varix' : data.displayName;
       return data;
     }).get(function (error, rows) {
@@ -152,7 +145,7 @@ var promiseWeapons = function promiseWeapons(attachmentsById) {
         reject(error);
       }
 
-      var weaponsById = window.weaponsById = _.keyBy(rows, 'WEAPONFILE');
+      weaponsById = window.weaponsById = _.keyBy(rows, 'WEAPONFILE');
 
       resolve(weaponsById);
     });
@@ -199,7 +192,7 @@ function filterWeapons(weaponsById, weaponGroups) {
   var game = document.querySelector('select#game').value;
 
   return _.filter(weaponsById, function (weapon) {
-    return weapon.WEAPONFILE.indexOf(game) !== -1 && weapon.WEAPONFILE.indexOf('dualoptic_') === -1 && weaponGroups[category].indexOf(weapon.displayName) !== -1;
+    return weapon.WEAPONFILE.indexOf(game) !== -1 && weapon.WEAPONFILE.indexOf('dualoptic_') === -1 && weapon.WEAPONFILE.indexOf('dw_') === -1 && weapon.WEAPONFILE.indexOf('lh_') === -1 && weaponGroups[category].indexOf(weapon.displayName) !== -1;
   });
 }
 
@@ -220,13 +213,13 @@ function draw(chartsById, weapons) {
       chart.data.datasets[0].data = data;
       chart.update();
     } else {
-      chart = drawChart(weaponModel.name, weaponModel.id, labels, data);
+      chart = drawChart(weaponModel.name, weaponModel.id, labels, data, weaponModel);
       chartsById[weaponModel.id] = chart;
     }
   });
 }
 
-function drawChart(title, weaponfile, labels, data) {
+function drawChart(title, weaponfile, labels, data, weaponModel) {
   var template = '\n    <div class="chart">\n      <div class="chart-header">\n        <span class="title">' + title + '</span>\n        <span class="weaponfile">' + weaponfile + '</span>\n      </div>\n      <span class="watermark">CODCharts.com</span>\n      <canvas width="250" height="250"></canvas>\n    </div>\n  ';
   var div = document.createElement('div');
   div.innerHTML = template;
@@ -242,7 +235,8 @@ function drawChart(title, weaponfile, labels, data) {
       borderWidth: 1,
       hoverBackgroundColor: 'rgba(255, 102, 0, 0.5)',
       hoverBorderColor: 'rgba(255, 102, 0, 0.6)',
-      data: data
+      data: data,
+      weaponModel: weaponModel
     }]
   };
 
@@ -276,10 +270,39 @@ function drawChart(title, weaponfile, labels, data) {
           color: 'rgba(52, 52, 52, 1)'
         }
       }]
+    },
+    tooltips: {
+      // custom: function() {
+      //   console.log('tooltip', arguments)
+      // },
+      backgroundColor: 'rgba(0,0,0,1)',
+      bodyFontSize: 15,
+      callbacks: {
+        title: function title(tooltipItem, data) {
+          console.log('arguments', arguments);
+          var stk = tooltipItem[0].xLabel;
+          var weaponModel = data.datasets[tooltipItem[0].datasetIndex].weaponModel;
+          var stats = weaponModel.stats[tooltipItem[0].index];
+          return stk + ' Hits';
+        },
+        beforeBody: function beforeBody(tooltipItem, data) {
+          var weaponModel = data.datasets[tooltipItem[0].datasetIndex].weaponModel;
+          var stats = weaponModel.stats[tooltipItem[0].index];
+          console.log(weaponModel);
+          return [stats.range.meters + 'm', stats.range.feet + 'ft'].join('\n');
+        },
+        label: function label(tooltipItem, data) {
+          console.log(tooltipItem);
+          var weaponModel = data.datasets[tooltipItem.datasetIndex].weaponModel;
+          var stats = weaponModel.stats[tooltipItem.index];
+          console.log(weaponModel);
+          return [stats.damage + ' Damage'].join('\n');
+        }
+      }
     }
   };
 
-  return new _chartjs2.default(ctx, {
+  return new Chart(ctx, {
     type: 'bar',
     data: chartData,
     options: options
