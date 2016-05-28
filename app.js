@@ -1,5 +1,19 @@
 'use strict';
 
+var _chartjs = require('chartjs');
+
+var _chartjs2 = _interopRequireDefault(_chartjs);
+
+var _lodash = require('lodash');
+
+var _lodash2 = _interopRequireDefault(_lodash);
+
+var _d = require('d3');
+
+var _d2 = _interopRequireDefault(_d);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
 var weaponGroupNames = {
@@ -117,7 +131,7 @@ function parseWeapon(weapon, attachmentsById, attachments) {
 }
 
 var promiseAttachments = new Promise(function (resolve, reject) {
-  d3.csv('data/raw_attachments.csv').get(function (error, rows) {
+  _d2.default.csv('data/raw_attachments.csv').get(function (error, rows) {
     if (error) {
       reject(error);
     }
@@ -130,7 +144,7 @@ var promiseAttachments = new Promise(function (resolve, reject) {
 
 var promiseWeapons = function promiseWeapons(attachmentsById) {
   return new Promise(function (resolve, reject) {
-    d3.csv('data/raw_weapons.csv').row(function (data) {
+    _d2.default.csv('data/raw_weapons.csv').row(function (data) {
       data.name = data.WEAPONFILE.indexOf('dualoptic_') === 0 ? data.displayName + ' Varix' : data.displayName;
       return data;
     }).get(function (error, rows) {
@@ -265,7 +279,7 @@ function drawChart(title, weaponfile, labels, data) {
     }
   };
 
-  return new Chart(ctx, {
+  return new _chartjs2.default(ctx, {
     type: 'bar',
     data: chartData,
     options: options
