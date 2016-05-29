@@ -249,7 +249,7 @@
 	      }],
 	      yAxes: [{
 	        scaleLabel: {
-	          display: false,
+	          display: true,
 	          labelString: 'Distance (meters)',
 	          fontFamily: 'sans-serif'
 	        },
