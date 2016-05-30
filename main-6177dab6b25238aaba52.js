@@ -212,86 +212,77 @@
 	}
 
 	function drawChart(title, weaponfile, labels, data, weaponModel) {
-	  var template = '\n    <div class="chart">\n      <div class="chart-header">\n        <span class="title">' + title + '</span>\n        <span class="weaponfile">' + weaponfile + '</span>\n      </div>\n      <span class="watermark">CODCharts.com</span>\n      <canvas width="250" height="250"></canvas>\n    </div>\n  ';
+	  var template = '\n  <div class="chart">\n    <div class="chart-header">\n      <span class="title">' + title + '</span>\n      <span class="weaponfile">' + weaponfile + '</span>\n    </div>\n    <div class="chart-body">\n    </div>\n  </div>\n  ';
 	  var div = document.createElement('div');
 	  div.innerHTML = template;
 	  document.querySelector('.weapons').appendChild(div);
-	  var ctx = div.querySelector('canvas');
+	  var ctx = div.querySelector('.chart-body');
 
-	  var chartData = {
-	    labels: labels,
-	    datasets: [{
-	      label: title + ' Shots To Kill',
-	      backgroundColor: 'rgba(255, 102, 0, 0.8)',
-	      borderColor: 'rgba(255, 102, 0, 1)',
-	      borderWidth: 1,
-	      hoverBackgroundColor: 'rgba(255, 102, 0, 0.5)',
-	      hoverBorderColor: 'rgba(255, 102, 0, 0.6)',
-	      data: data,
-	      weaponModel: weaponModel
-	    }]
-	  };
+	  var maxRange = _.max(weaponModel.stats.map(function (wm) {
+	    return wm.range.meters * 2;
+	  }));
+	  var barWidth = Math.max(200, maxRange);
 
-	  var options = {
-	    legend: {
-	      display: false
-	    },
-	    scales: {
-	      paddingLeft: 30,
-	      xAxes: [{
-	        ticks: {
-	          fontSize: 20,
-	          fontColor: 'rgba(102, 102, 102, 1)'
-	        },
-	        gridLines: {
-	          display: false
-	        }
-	      }],
-	      yAxes: [{
-	        scaleLabel: {
-	          display: true,
-	          labelString: 'Distance (meters)',
-	          fontFamily: 'sans-serif'
-	        },
-	        ticks: {
-	          maxTicksLimit: 5,
-	          max: 70,
-	          min: 0
-	        },
-	        gridLines: {
-	          color: 'rgba(52, 52, 52, 1)'
-	        }
-	      }]
-	    },
-	    tooltips: {
-	      backgroundColor: 'rgba(0,0,0,1)',
-	      bodyFontSize: 15,
-	      callbacks: {
-	        title: function title(tooltipItem, data) {
-	          var stk = tooltipItem[0].xLabel;
-	          var weaponModel = data.datasets[tooltipItem[0].datasetIndex].weaponModel;
-	          var stats = weaponModel.stats[tooltipItem[0].index];
-	          return stk + ' Hits';
-	        },
-	        beforeBody: function beforeBody(tooltipItem, data) {
-	          var weaponModel = data.datasets[tooltipItem[0].datasetIndex].weaponModel;
-	          var stats = weaponModel.stats[tooltipItem[0].index];
-	          return [stats.range.meters + 'm', stats.range.feet + 'ft'].join('\n');
-	        },
-	        label: function label(tooltipItem, data) {
-	          var weaponModel = data.datasets[tooltipItem.datasetIndex].weaponModel;
-	          var stats = weaponModel.stats[tooltipItem.index];
-	          return [stats.damage + ' Damage'].join('\n');
-	        }
-	      }
+	  var svg = _d2.default.select(ctx).append('svg').attr('height', 60).attr('width', barWidth).append('g');
+
+	  svg.append('g').append('rect').attr('fill', 'rgba(90, 90, 90, 1)').attr('width', barWidth).attr('height', 20).attr('transform', 'translate(10, 10)');
+
+	  var barsGroup = svg.append('g');
+
+	  var updateSel = barsGroup.selectAll('rect').data(weaponModel.stats);
+
+	  /* operate on old elements only */
+	  updateSel.attr();
+
+	  /* operate on new elements only */
+	  var bars = updateSel.enter().append('g');
+
+	  function getSTKBarWidth(data, index) {
+	    return data.range.meters * 2;
+	  }
+
+	  var xOffsets = [0];
+	  function getSTKBarOffsetX(data, index) {
+	    if (xOffsets.length - 1 <= index) {
+	      xOffsets.push(data.range.meters * 2);
 	    }
-	  };
+	    return xOffsets[index];
+	  }
 
-	  return new _Chart2.default(ctx, {
-	    type: 'bar',
-	    data: chartData,
-	    options: options
-	  });
+	  function getSTKTextOffsetX(data, index) {
+	    return getSTKBarOffsetX(data, index) + getSTKBarWidth(data, index) / 2;
+	  }
+
+	  var scale = _d2.default.scale.linear().domain([0, 100]).range([0, 200]);
+
+	  var xAxis = _d2.default.svg.axis().scale(scale).innerTickSize(10).outerTickSize(2).tickValues([5, 15, 30, 50, 70, 90, 100]);
+	  // console.log('xAxis', xAxis(10))
+
+	  bars.append("g").attr('class', 'xaxis axis').attr("transform", "translate(10, 30)").call(xAxis).selectAll('text');
+
+	  var colors = ['rgba(255, 198, 54, 1)', 'rgba(255, 173, 54, 1)', 'rgba(255, 149, 54, 1)', 'rgba(250, 114, 53, 1)', 'rgba(219, 58, 47, 1)', 'rgba(158, 34, 51, 1)'];
+
+	  var bar = bars.append('g').attr('width', getSTKBarWidth).attr('height', 20).attr('transform', 'translate(10, 10)');
+
+	  bar.append('rect').attr('fill', function (d, i) {
+	    return colors[d.stk - 1];
+	  }).attr('width', getSTKBarWidth).attr('x', getSTKBarOffsetX).attr('height', 20);
+
+	  bar.append('text').text(function (d) {
+	    return d.stk;
+	  }).attr('fill', 'rgba(0,0,0,1)').attr('x', getSTKTextOffsetX).attr('y', 16).attr('text-anchor', 'middle');
+	  //
+	  // bars.append('text')
+	  //   .text(d => d.range.meters + 'm')
+	  //   .attr('height', 10)
+	  //   .attr('fill', 'white')
+	  //   .attr('x', d => d.range.meters * 2)
+	  //   .attr('y', 50)
+	  //   .attr('text-anchor', 'start')
+	  //   .attr('ali');
+
+	  updateSel.attr();
+	  /* operate on old and new elements */updateSel.exit().remove(); /* complete the enter-update-exit pattern */
 	}
 
 	function init() {
