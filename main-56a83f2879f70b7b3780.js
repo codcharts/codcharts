@@ -46,6 +46,8 @@
 
 	'use strict';
 
+	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
 	__webpack_require__(1);
 
 	var _Chart = __webpack_require__(7);
@@ -171,12 +173,11 @@
 	    return prev;
 	  }, []);
 
-	  return {
+	  return _extends({}, weapon, {
 	    name: weapon.name,
 	    id: weapon.WEAPONFILE,
-	    stats: stats,
-	    weapon: weapon
-	  };
+	    stats: stats
+	  });
 	}
 
 	function filterWeapons(weaponsById, weaponGroups) {
@@ -202,17 +203,16 @@
 
 	    var chart = chartsById[weaponModel.id];
 	    if (chart) {
-	      chart.data.datasets[0].data = data;
-	      chart.update();
+	      drawChart(weaponModel, chart);
 	    } else {
-	      chart = drawChart(weaponModel.name, weaponModel.id, labels, data, weaponModel);
+	      chart = drawChart(weaponModel);
 	      chartsById[weaponModel.id] = chart;
 	    }
 	  });
 	}
 
-	function drawChart(title, weaponfile, labels, data, weaponModel) {
-	  var template = '\n  <div class="chart">\n    <div class="chart-header">\n      <span class="title">' + title + '</span>\n      <span class="weaponfile">' + weaponfile + '</span>\n    </div>\n    <div class="chart-body">\n    </div>\n  </div>\n  ';
+	function setupChart(weaponModel) {
+	  var template = '\n  <div class="chart">\n    <div class="chart-header">\n      <span class="title">' + weaponModel.name + '</span>\n      <span class="weaponfile">' + weaponModel.WEAPONFILE + '</span>\n    </div>\n    <div class="chart-body">\n    </div>\n  </div>\n  ';
 	  var div = document.createElement('div');
 	  div.innerHTML = template;
 	  document.querySelector('.weapons').appendChild(div);
@@ -225,26 +225,35 @@
 
 	  var svg = _d2.default.select(ctx).append('svg').attr('height', 60).attr('width', barWidth).append('g');
 
-	  svg.append('g').append('rect').attr('fill', 'rgba(90, 90, 90, 1)').attr('width', barWidth).attr('height', 20).attr('transform', 'translate(10, 10)');
+	  svg.append('g').append('rect').attr('fill', 'rgba(90, 90, 90, 1)').attr('width', barWidth).attr('height', 20);
 
-	  var barsGroup = svg.append('g');
+	  var scale = _d2.default.scale.linear().domain([0, 100]).range([0, 200]);
 
-	  var updateSel = barsGroup.selectAll('rect').data(weaponModel.stats);
+	  var xAxis = _d2.default.svg.axis().scale(scale).innerTickSize(10).outerTickSize(2).tickValues([5, 15, 30, 50, 70, 90, 120]);
 
-	  /* operate on old elements only */
-	  updateSel.attr();
+	  svg.append("g").attr('class', 'xaxis axis').attr("transform", "translate(0, 20)").call(xAxis).selectAll('text');
 
-	  /* operate on new elements only */
-	  var bars = updateSel.enter().append('g');
+	  var barsGroup = svg.append('g').attr('class', 'barsGroup');
 
-	  function getSTKBarWidth(data, index) {
-	    return data.range.meters * 2;
+	  return svg;
+	}
+
+	var stkColors = ['rgba(255, 198, 54, 1)', 'rgba(255, 173, 54, 1)', 'rgba(255, 149, 54, 1)', 'rgba(250, 114, 53, 1)', 'rgba(219, 58, 47, 1)', 'rgba(158, 34, 51, 1)'];
+
+	function drawChart(weaponModel, svg) {
+	  if (!svg) {
+	    svg = setupChart(weaponModel);
+	  }
+
+	  function getSTKBarWidth(d, index) {
+	    return d.range.meters * 2;
 	  }
 
 	  var xOffsets = [0];
-	  function getSTKBarOffsetX(data, index) {
+	  function getSTKBarOffsetX(d, index) {
+	    console.log('offsetX', d.stk, index);
 	    if (xOffsets.length - 1 <= index) {
-	      xOffsets.push(data.range.meters * 2);
+	      xOffsets.push(d.range.meters * 2);
 	    }
 	    return xOffsets[index];
 	  }
@@ -253,42 +262,36 @@
 	    return getSTKBarOffsetX(data, index) + getSTKBarWidth(data, index) / 2;
 	  }
 
-	  var scale = _d2.default.scale.linear().domain([0, 100]).range([0, 200]);
+	  var barsGroup = svg.select('.barsGroup');
 
-	  var xAxis = _d2.default.svg.axis().scale(scale).innerTickSize(10).outerTickSize(2).tickValues([5, 15, 30, 50, 70, 90, 100]);
-	  // console.log('xAxis', xAxis(10))
-
-	  bars.append("g").attr('class', 'xaxis axis').attr("transform", "translate(10, 30)").call(xAxis).selectAll('text');
-
-	  var colors = ['rgba(255, 198, 54, 1)', 'rgba(255, 173, 54, 1)', 'rgba(255, 149, 54, 1)', 'rgba(250, 114, 53, 1)', 'rgba(219, 58, 47, 1)', 'rgba(158, 34, 51, 1)'];
-
-	  var bar = bars.append('g').attr('width', getSTKBarWidth).attr('height', 20).attr('transform', 'translate(10, 10)');
-
-	  bar.append('rect').attr('fill', function (d, i) {
-	    return colors[d.stk - 1];
-	  }).attr('width', getSTKBarWidth).attr('x', getSTKBarOffsetX).attr('height', 20);
-
-	  bar.append('text').text(function (d) {
+	  // DATA JOIN
+	  var stkBars = barsGroup.selectAll('rect').data(weaponModel.stats, function (d) {
 	    return d.stk;
-	  }).attr('fill', 'rgba(0,0,0,1)').attr('x', getSTKTextOffsetX).attr('y', 16).attr('text-anchor', 'middle');
-	  //
-	  // bars.append('text')
-	  //   .text(d => d.range.meters + 'm')
-	  //   .attr('height', 10)
-	  //   .attr('fill', 'white')
-	  //   .attr('x', d => d.range.meters * 2)
-	  //   .attr('y', 50)
-	  //   .attr('text-anchor', 'start')
-	  //   .attr('ali');
+	  });
 
-	  updateSel.attr();
-	  /* operate on old and new elements */updateSel.exit().remove(); /* complete the enter-update-exit pattern */
+	  stkBars.enter().append('rect').attr('height', 20).attr('y', 0);
+
+	  stkBars.transition().duration(750).attr('x', getSTKBarOffsetX).attr('width', getSTKBarWidth).attr('fill', function (d) {
+	    return stkColors[d.stk - 1];
+	  });
+
+	  var stkText = barsGroup.selectAll('text').data(weaponModel.stats, function (d) {
+	    return d.stk;
+	  });
+
+	  stkText.enter().append('text').text(function (d) {
+	    return d.stk;
+	  }).attr('text-anchor', 'middle').attr('y', 16).attr('fill', 'black');
+
+	  stkText.transition().duration(750).attr('x', getSTKTextOffsetX).attr('width', getSTKBarWidth);
+
+	  return svg;
 	}
 
 	function init() {
 	  var chartsById = window.chartsById = {};
 	  var weapons = void 0;
-	  var weaponsById = window.attachmentsById = _.keyBy(_d2.default.csv.parse(_raw_weapons2.default, function (data) {
+	  var weaponsById = window.weaponsById = _.keyBy(_d2.default.csv.parse(_raw_weapons2.default, function (data) {
 	    data.name = data.WEAPONFILE.indexOf('dualoptic_') === 0 ? data.displayName + ' Varix' : data.displayName;
 	    return data;
 	  }), 'WEAPONFILE');
