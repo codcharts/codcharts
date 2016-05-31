@@ -212,7 +212,7 @@
 	}
 
 	function setupChart(weaponModel) {
-	  var template = '\n  <div class="chart">\n    <div class="chart-header">\n      <span class="title">' + weaponModel.name + '</span>\n      <span class="weaponfile">' + weaponModel.WEAPONFILE + '</span>\n    </div>\n    <div class="chart-body">\n    </div>\n  </div>\n  ';
+	  var template = '\n  <div class="chart">\n    <div class="chart-header">\n      <span class="title">' + weaponModel.name + '</span>\n    </div>\n    <div class="chart-body">\n    </div>\n  </div>\n  ';
 	  var div = document.createElement('div');
 	  div.innerHTML = template;
 	  document.querySelector('.weapons').appendChild(div);
@@ -234,6 +234,8 @@
 	  svg.append("g").attr('class', 'xaxis axis').attr("transform", "translate(0, 20)").call(xAxis).selectAll('text');
 
 	  var barsGroup = svg.append('g').attr('class', 'barsGroup');
+
+	  svg.append('text').text('Distance (meters)').attr('y', 55).attr('x', barWidth / 2).attr('text-anchor', 'middle').attr('fill', 'rgba(120, 120, 120, 1)').attr('font-size', '12px');
 
 	  return svg;
 	}
