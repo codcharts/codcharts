@@ -692,3 +692,7 @@ button:focus {
   color: #fff;;
   background-color: rgba(210, 88, 6, 1);
 }
+
+select {
+  color: #000;
+}
